@@ -3,36 +3,47 @@ package io.autumn.core;
 import io.autumn.core.context.*;
 import io.autumn.core.injection.DependencyInjector;
 import io.autumn.core.lifecycle.LifecycleManager;
+import io.autumn.core.registry.BeanDefinition;
 import io.autumn.core.registry.BeanRegistry;
 import io.autumn.core.utils.ClassPathScanner;
 
 import java.util.Set;
 
-/**
- * Entry point for bootstrapping the Autumn IoC container.
- */
 public class Autumn {
 
     public static AutumnContext start(String basePackage) {
-        System.out.println("[AUTUMN] Bootstrapping context for package: " + basePackage);
+        System.out.println("[AUTUMN] Bootstrapping: " + basePackage);
 
+        // 1) Discover components
         ClassPathScanner scanner = new ClassPathScanner();
         Set<Class<?>> components = scanner.findComponentClasses(basePackage);
-        System.out.println("[AUTUMN] Discovered " + components.size() + "component(s)");
+        System.out.println("[AUTUMN] Discovered " + components.size() + " component(s)");
 
+        // 2) Core services
         BeanRegistry registry = new BeanRegistry();
-        BeanFactory factory = new BeanFactory();
         DependencyInjector injector = new DependencyInjector();
-        LifecycleManager lifecycleManager = new LifecycleManager();
+        LifecycleManager lifecycle = new LifecycleManager();
+        BeanFactory factory = new BeanFactory(registry, injector, lifecycle);
 
+        // 3) Register bean definitions
         for (Class<?> comp : components) {
             registry.registerClass(comp);
-            System.out.println("[AUTUMN] Registered component: " + comp.getName());
+            System.out.println("[AUTUMN] Registered: " + comp.getName());
         }
 
-        AutumnContext context = new AutumnContext(registry, factory, injector, lifecycleManager);
-        System.out.println("[AUTUMN] Context initialized successfully");
+        // 4) Instantiate all singletons (eager init for MVP)
+        for (BeanDefinition def : registry.getAll()) {
+            factory.getOrCreateBean(def.type());
+        }
+        System.out.println("[AUTUMN] All components instantiated.");
 
+        // 5) Build context
+        AutumnContext context = new AutumnContext(registry, factory, injector, lifecycle);
+
+        // 6) JVM shutdown hook -> @PreDestroy
+        Runtime.getRuntime().addShutdownHook(new Thread(context::close, "autumn-shutdown"));
+
+        System.out.println("[AUTUMN] Context ready.");
         return context;
     }
 }

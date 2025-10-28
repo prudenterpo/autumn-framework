@@ -1,13 +1,9 @@
 package io.autumn.core.context;
 
-import io.autumn.core.registry.BeanRegistry;
 import io.autumn.core.injection.DependencyInjector;
 import io.autumn.core.lifecycle.LifecycleManager;
+import io.autumn.core.registry.BeanRegistry;
 
-/**
- * Default implementation of ApplicationContext.
- * Responsible for initializing and managing the Autumn IoC container.
- */
 public class AutumnContext implements ApplicationContext {
 
     private final BeanRegistry registry;
@@ -24,7 +20,7 @@ public class AutumnContext implements ApplicationContext {
 
     @Override
     public <T> T getBean(Class<T> type) {
-        return type.cast(factory.getBean(type));
+        return factory.getOrCreateBean(type);
     }
 
     @Override
