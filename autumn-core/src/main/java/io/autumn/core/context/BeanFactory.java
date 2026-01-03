@@ -1,10 +1,11 @@
 package io.autumn.core.context;
 
-import io.autumn.core.injection.DependencyInjector;
 import io.autumn.core.lifecycle.LifecycleManager;
+import io.autumn.core.registry.BeanDefinition;
 import io.autumn.core.registry.BeanRegistry;
 
 import java.lang.reflect.Constructor;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,12 +16,10 @@ public class BeanFactory {
     private final Set<Class<?>> creating = ConcurrentHashMap.newKeySet();
 
     private final BeanRegistry registry;
-    private final DependencyInjector injector;
     private final LifecycleManager lifecycle;
 
-    public BeanFactory(BeanRegistry registry, DependencyInjector injector, LifecycleManager lifecycle) {
+    public BeanFactory(BeanRegistry registry, LifecycleManager lifecycle) {
         this.registry = registry;
-        this.injector = injector;
         this.lifecycle = lifecycle;
     }
 
@@ -30,7 +29,8 @@ public class BeanFactory {
     }
 
     private Object createBeanInternal(Class<?> type) {
-        if (!registry.contains(type)) {
+        BeanDefinition definition = registry.getDefinition(type);
+        if (definition == null) {
             throw new IllegalStateException("[AUTUMN] No BeanDefinition for type: " + type.getName());
         }
         if (!creating.add(type)) {
@@ -38,10 +38,8 @@ public class BeanFactory {
         }
 
         try {
-            Constructor<?> ctor = resolveNoArgConstructor(type);
-            Object instance = newInstance(ctor);
-
-            injector.injectDependencies(instance, this);
+            Object[] dependencies = resolveDependencies(definition.constructorParamTypes());
+            Object instance = instantiate(definition.constructor(), dependencies);
 
             lifecycle.postConstruct(instance);
 
@@ -51,21 +49,21 @@ public class BeanFactory {
         }
     }
 
-    private Constructor<?> resolveNoArgConstructor(Class<?> type) {
-        try {
-            Constructor<?> ctor = type.getDeclaredConstructor();
-            ctor.setAccessible(true);
-            return ctor;
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("[AUTUMN] Missing no-arg constructor on: " + type.getName());
+    private Object[] resolveDependencies(List<Class<?>> paramTypes) {
+        Object[] dependencies = new Object[paramTypes.size()];
+        for (int i = 0; i < paramTypes.size(); i++) {
+            dependencies[i] = getOrCreateBean(paramTypes.get(i));
         }
+        return dependencies;
     }
 
-    private Object newInstance(Constructor<?> ctor) {
+    private Object instantiate(Constructor<?> constructor, Object[] args) {
         try {
-            return ctor.newInstance();
+            return constructor.newInstance(args);
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("[AUTUMN] Failed to instantiate: " + ctor.getDeclaringClass().getName(), e);
+            throw new IllegalStateException(
+                    "[AUTUMN] Failed to instantiate: " + constructor.getDeclaringClass().getName(), e
+            );
         }
     }
 

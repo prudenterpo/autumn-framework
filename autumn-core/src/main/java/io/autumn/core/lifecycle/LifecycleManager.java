@@ -1,7 +1,7 @@
 package io.autumn.core.lifecycle;
 
-import io.autumn.core.annotations.PostConstruct;
-import io.autumn.core.annotations.PreDestroy;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 import java.lang.reflect.Method;
 import java.util.List;

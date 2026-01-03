@@ -1,7 +1,7 @@
 package io.autumn.core;
 
-import io.autumn.core.context.*;
-import io.autumn.core.injection.DependencyInjector;
+import io.autumn.core.context.AutumnContext;
+import io.autumn.core.context.BeanFactory;
 import io.autumn.core.lifecycle.LifecycleManager;
 import io.autumn.core.registry.BeanDefinition;
 import io.autumn.core.registry.BeanRegistry;
@@ -21,9 +21,8 @@ public class Autumn {
 
         // 2) Core services
         BeanRegistry registry = new BeanRegistry();
-        DependencyInjector injector = new DependencyInjector();
         LifecycleManager lifecycle = new LifecycleManager();
-        BeanFactory factory = new BeanFactory(registry, injector, lifecycle);
+        BeanFactory factory = new BeanFactory(registry, lifecycle);
 
         // 3) Register bean definitions
         for (Class<?> comp : components) {
@@ -38,7 +37,7 @@ public class Autumn {
         System.out.println("[AUTUMN] All components instantiated.");
 
         // 5) Build context
-        AutumnContext context = new AutumnContext(registry, factory, injector, lifecycle);
+        AutumnContext context = new AutumnContext(registry, factory, lifecycle);
 
         // 6) JVM shutdown hook -> @PreDestroy
         Runtime.getRuntime().addShutdownHook(new Thread(context::close, "autumn-shutdown"));
