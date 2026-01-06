@@ -1,0 +1,29 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.autumn</groupId>
+        <artifactId>autumn-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>autumn-examples</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Autumn Examples</name>
+    <description>Example applications demonstrating Autumn Framework features</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.autumn</groupId>
+            <artifactId>autumn-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+</project>
