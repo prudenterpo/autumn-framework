@@ -25,14 +25,27 @@ public class BeanFactory {
 
     @SuppressWarnings("unchecked")
     public <T> T getOrCreateBean(Class<T> type) {
-        return (T) singletons.computeIfAbsent(type, this::createBeanInternal);
+        Class<?> resolvedType = registry.resolveType(type);
+        if (resolvedType == null) {
+            throw new IllegalStateException("[AUTUMN] No bean found for type: " + type.getName());
+        }
+
+        BeanDefinition definition = registry.getDefinition(resolvedType);
+
+        if (definition.isSingleton()) {
+            return (T) singletons.computeIfAbsent(resolvedType, t -> createBeanInternal(definition));
+        } else {
+            return (T) createBeanInternal(definition);
+        }
     }
 
-    private Object createBeanInternal(Class<?> type) {
-        BeanDefinition definition = registry.getDefinition(type);
-        if (definition == null) {
-            throw new IllegalStateException("[AUTUMN] No BeanDefinition for type: " + type.getName());
-        }
+    public boolean containsBean(Class<?> type) {
+        return singletons.containsKey(type) || singletons.containsKey(registry.resolveType(type));
+    }
+
+    private Object createBeanInternal(BeanDefinition definition) {
+        Class<?> type = definition.type();
+
         if (!creating.add(type)) {
             throw new IllegalStateException("[AUTUMN] Circular dependency detected while creating: " + type.getName());
         }
@@ -65,9 +78,5 @@ public class BeanFactory {
                     "[AUTUMN] Failed to instantiate: " + constructor.getDeclaringClass().getName(), e
             );
         }
-    }
-
-    public boolean containsBean(Class<?> type) {
-        return singletons.containsKey(type);
     }
 }

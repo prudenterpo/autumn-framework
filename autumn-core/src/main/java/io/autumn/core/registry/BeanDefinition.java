@@ -9,13 +9,15 @@ public class BeanDefinition {
     private final String name;
     private final Constructor<?> constructor;
     private final List<Class<?>> constructorParamTypes;
+    private final boolean singleton;
 
     public BeanDefinition(Class<?> type, String name, Constructor<?> constructor,
-                          List<Class<?>> constructorParamTypes) {
+                          List<Class<?>> constructorParamTypes, boolean singleton) {
         this.type = type;
         this.name = name;
         this.constructor = constructor;
         this.constructorParamTypes = constructorParamTypes;
+        this.singleton = singleton;
     }
 
     public Class<?> type() {
@@ -32,5 +34,9 @@ public class BeanDefinition {
 
     public List<Class<?>> constructorParamTypes() {
         return constructorParamTypes;
+    }
+
+    public boolean isSingleton() {
+        return singleton;
     }
 }
