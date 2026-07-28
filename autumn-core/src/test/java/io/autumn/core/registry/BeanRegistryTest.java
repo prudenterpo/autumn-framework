@@ -50,6 +50,25 @@ class BeanRegistryTest {
         assertEquals(PrimaryEmailSender.class, resolved);
     }
 
+    @Test
+    void shouldGetDefinitionForConcreteClassImplementingInterface() {
+        registry.registerClass(EmailSender.class);
+
+        BeanDefinition def = registry.getDefinition(EmailSender.class);
+
+        assertNotNull(def);
+        assertEquals(EmailSender.class, def.type());
+    }
+
+    @Test
+    void shouldResolveTypeForConcreteClassImplementingInterface() {
+        registry.registerClass(EmailSender.class);
+
+        Class<?> resolved = registry.resolveType(EmailSender.class);
+
+        assertEquals(EmailSender.class, resolved);
+    }
+
     @Component
     static class SimpleComponent {
     }
