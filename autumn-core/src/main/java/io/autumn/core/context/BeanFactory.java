@@ -54,7 +54,7 @@ public class BeanFactory {
             Object[] dependencies = resolveDependencies(definition.constructorParamTypes());
             Object instance = instantiate(definition.constructor(), dependencies);
 
-            lifecycle.postConstruct(instance);
+            lifecycle.postConstruct(instance, definition.isSingleton());
 
             return instance;
         } finally {
