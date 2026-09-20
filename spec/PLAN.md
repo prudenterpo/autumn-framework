@@ -1,88 +1,88 @@
 # Autumn Core v1
 
-Fonte da verdade: `spec/features/*.feature`.
-Se o comportamento mudar, o `.feature` muda primeiro. Sem spec-kit, sem task files, sem harness.
+Source of truth: `spec/features/*.feature`.
+If behavior changes, change the `.feature` first. No spec-kit, no task files, no harness.
 
-## Como implementar com IA
+## How to implement with an AI agent
 
-1. Pegue a próxima fase abaixo.
-2. Escreva (ou ajuste) o teste JUnit com `@DisplayName` igual ao nome do cenário.
-3. Faça o cenário passar. Não adicione Cucumber nesta v1: o Gherkin é o spec, o JUnit é o executor.
-4. Commit por fase. Não abra docs novos para “organizar o trabalho”.
+1. Take the next phase below.
+2. Write (or adjust) the JUnit test with `@DisplayName` equal to the scenario name.
+3. Make the scenario pass. Do not add Cucumber in this v1: Gherkin is the spec, JUnit is the runner.
+4. One commit per phase. Do not add process docs to "organize the work".
 
-Idioma do spec: português. Nomes de tipo, anotação e método: iguais ao código.
+Spec language: English. Type, annotation, and method names match the code.
 
-## Recorte
+## Scope
 
-Tudo o que falta para a v1 funcional:
+Everything still needed for a working v1:
 
-- Trazer o patch de lifecycle que hoje está só em `develop` (scan único + prototype sem `@PreDestroy`).
-- Corrigir bootstrap de prototype, factory reentrante, scanner que engole erro, `containsBean` com NPE, `close()` fora da interface, `@Component.value()` ignorado.
-- Completar a API: `getBean(String)`, `@Qualifier`, `DependencyResolver`, exceções tipadas, `AutumnLogger`.
-- Fechar com JaCoCo, README e LICENSE (MIT, já declarado no POM).
+- Land the lifecycle patch that currently lives only on `develop` (single method scan + prototypes skipped for `@PreDestroy`).
+- Fix prototype eager-init at bootstrap, reentrant `BeanFactory`, scanner swallowing unexpected errors, `containsBean` NPE, `close()` missing from the interface, unused `@Component.value()`.
+- Finish the API: `getBean(String)`, `@Qualifier`, `DependencyResolver`, typed exceptions, `AutumnLogger`.
+- Close with JaCoCo, README, and MIT LICENSE (already declared in the POM).
 
-Fora desta v1: field/setter injection, vários pacotes no `start()`, AOP, XML, scopes além de singleton/prototype.
+Out of this v1: field/setter injection, multiple packages in `start()`, AOP, XML, scopes other than singleton/prototype.
 
-## Fases
+## Phases
 
-Cada fase lista os cenários que precisam ficar verdes. Ordem importa: cada uma assume a anterior.
+Each phase lists the scenarios that must go green. Order matters: each phase assumes the previous one.
 
-### 0. Alinhar lifecycle do develop
+### 0. Align lifecycle with develop
 
-`LifecycleManager.postConstruct` faz um único scan dos métodos. Prototype nunca entra na lista de `@PreDestroy`. Falha em `@PostConstruct` é logada e não derruba os outros beans.
+`LifecycleManager.postConstruct` scans methods once. Prototypes are never added to the `@PreDestroy` list. A failing `@PostConstruct` is logged and does not take down other beans.
 
-Cenários: `ciclo-de-vida.feature` → scan único, prototype sem destroy, falha isolada no `@PostConstruct`.
+Scenarios: `lifecycle.feature` → single scan, prototype not destroyed, isolated `@PostConstruct` failure.
 
-### 1. Container estável
+### 1. Stable container
 
-- `Autumn.start` instancia só singletons. Prototype nasce só no `getBean`.
-- `BeanFactory` não usa `ConcurrentHashMap.computeIfAbsent` para criar bean (o mapa não é reentrante). Grafo de singletons com construtor tem que subir.
-- `containsBean` não lança NPE se o tipo não existe.
-- `ApplicationContext.close()` existe e delega o shutdown.
-- Scanner: `ClassNotFoundException` / `NoClassDefFoundError` são ignorados; qualquer outro erro vai para WARN.
+- `Autumn.start` instantiates singletons only. Prototypes are created on `getBean`.
+- `BeanFactory` must not create beans via `ConcurrentHashMap.computeIfAbsent` (that map is not reentrant). A constructor-injected singleton graph must boot.
+- `containsBean` does not throw NPE for an unknown type.
+- `ApplicationContext.close()` exists and runs shutdown.
+- Scanner: `ClassNotFoundException` / `NoClassDefFoundError` are ignored; any other load error is logged at WARN.
 
-Cenários: `descoberta.feature` (erros de scan), `injecao.feature` (grafo reentrante), `ciclo-de-vida.feature` (prototype não nasce no boot), `consulta-e-erros.feature` (`close` e `containsBean`).
+Scenarios: `discovery.feature` (scan errors), `injection.feature` (reentrant graph), `lifecycle.feature` (prototype not created at boot), `lookup-and-errors.feature` (`close` and `containsBean`).
 
-### 2. Falhas explícitas e log
+### 2. Explicit failures and logging
 
-Três unchecked: `BeanNotFoundException`, `CircularDependencyException`, `NoUniqueBeanException`. Mensagens trazem tipo, nome ou impls.
+Three unchecked types: `BeanNotFoundException`, `CircularDependencyException`, `NoUniqueBeanException`. Messages include the type, name, or implementations.
 
-`AutumnLogger` com prefixo `[AUTUMN]` e `info` / `warn` / `error`. O core para de falar via `System.out` / `System.err`.
+`AutumnLogger` prefixes `[AUTUMN]` and exposes `info` / `warn` / `error`. Core code stops talking through `System.out` / `System.err`.
 
-Cenários: `consulta-e-erros.feature` (exceções e logger) e os de ciclo circular / impl duplicada em `injecao.feature`.
+Scenarios: `lookup-and-errors.feature` (exceptions and logger) plus circular / duplicate-impl cases in `injection.feature`.
 
-### 3. Lookup por nome
+### 3. Lookup by name
 
-`@Component("email")` vira o nome do bean. Sem value, o nome é o simple name. `getBean(String)` procura value primeiro, depois simple name. Não achar → `BeanNotFoundException`.
+`@Component("email")` becomes the bean name. With an empty value, the name is the simple class name. `getBean(String)` looks up the value first, then the simple name. A miss throws `BeanNotFoundException`.
 
-Cenários: `consulta-e-erros.feature` → lookup por tipo, por value, por simple name, miss.
+Scenarios: `lookup-and-errors.feature` → lookup by type, by value, by simple name, miss.
 
 ### 4. Qualifier
 
-`DependencyResolver` sai do `BeanFactory`. `@Qualifier` só em parâmetro de construtor. Qualifier ganha de `@Primary`. Sem qualifier e sem primary, com várias impls → `NoUniqueBeanException`. `BeanDefinition` ganha `qualifierNames`.
+`DependencyResolver` moves out of `BeanFactory`. `@Qualifier` is constructor-parameter only. Qualifier wins over `@Primary`. Several implementations with neither qualifier nor primary throw `NoUniqueBeanException`. `BeanDefinition` gains `qualifierNames`.
 
-Cenários: `injecao.feature` → qualifier, qualifier vs primary, várias impls.
+Scenarios: `injection.feature` → qualifier, qualifier vs primary, several implementations.
 
-### 5. Fechar a v1
+### 5. Close v1
 
-- JaCoCo no `autumn-core`, alvo ≥ 90%.
-- README na raiz: o que é, como buildar, anotações, exemplo que roda.
-- LICENSE MIT.
-- Example continua demonstrando injection, `@Primary`, prototype e lifecycle, agora sem instanciar prototype no boot.
+- JaCoCo on `autumn-core`, target ≥ 90%.
+- Root README: what it is, how to build, annotations, a running example.
+- MIT LICENSE.
+- The example still shows constructor injection, `@Primary`, prototype, and lifecycle, and no longer creates a prototype at boot.
 
-Cenários: todos verdes + `mvn test` + relatório JaCoCo.
+Scenarios: all green + `mvn test` + JaCoCo report.
 
-## Mapa rápido
+## Quick map
 
-| Feature | Código que deve mudar |
+| Feature | Code that should change |
 |---|---|
-| `descoberta.feature` | `ClassPathScanner`, `Autumn` |
-| `injecao.feature` | `BeanFactory`, `BeanRegistry`, `BeanDefinition`, `DependencyResolver`, `@Qualifier` |
-| `ciclo-de-vida.feature` | `LifecycleManager`, `Autumn.start`, `ApplicationContext.close` |
-| `consulta-e-erros.feature` | `AutumnContext`, `BeanRegistry` (índice por nome), exceções, `AutumnLogger` |
+| `discovery.feature` | `ClassPathScanner`, `Autumn` |
+| `injection.feature` | `BeanFactory`, `BeanRegistry`, `BeanDefinition`, `DependencyResolver`, `@Qualifier` |
+| `lifecycle.feature` | `LifecycleManager`, `Autumn.start`, `ApplicationContext.close` |
+| `lookup-and-errors.feature` | `AutumnContext`, `BeanRegistry` (name index), exceptions, `AutumnLogger` |
 
-## Critério de pronto
+## Done when
 
-- Todos os cenários têm teste JUnit correspondente e passam.
-- Example: `mvn -pl autumn-examples -am exec` (ou `main` do `Application`) mostra 2 `AuditLogger` distintos e nenhum terceiro criado no boot.
-- README descreve o recorte real, não o recorte desejado.
+- Every scenario has a matching JUnit test and it passes.
+- Example: `mvn -pl autumn-examples -am exec` (or `Application.main`) shows two distinct `AuditLogger` instances and no third instance created at boot.
+- README describes the shipped scope, not the wished-for scope.
