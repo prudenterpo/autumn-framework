@@ -10,7 +10,44 @@ If behavior changes, change the `.feature` first. No spec-kit, no task files, no
 3. Make the scenario pass. Do not add Cucumber in this v1: Gherkin is the spec, JUnit is the runner.
 4. One commit per phase. Do not add process docs to "organize the work".
 
-Spec language: English. Type, annotation, and method names match the code.
+## Language and git
+
+Chat language does not set artifact language. Slack (or any review thread) may be Portuguese. **Everything that lands in git is English.** No exceptions for "the user wrote in Portuguese".
+
+| Surface | Language | Rule |
+|---|---|---|
+| `spec/`, README, LICENSE notes, code comments | English | Spec already says this; keep it |
+| Identifiers, annotations, log lines | English / code names | Match the type in source |
+| Commit subject and body | English | Conventional Commits, imperative mood |
+| PR title and description | English | Same standard as commits; fill the PR template |
+
+Commits:
+
+```
+type(scope): short summary
+```
+
+- `type`: `feat` `fix` `test` `docs` `refactor` `build`
+- `scope`: area (`lifecycle`, `factory`, `scanner`, `context`, `spec`, `examples`)
+- Subject: imperative, lowercase after the colon, no period, ≤ 72 chars
+- Body (optional): why, not how. English. No Slack dump.
+- One commit per phase. Do not mix a feature with formatting or extra docs.
+
+Examples:
+
+```
+fix(lifecycle): skip prototypes in PreDestroy tracking
+feat(context): resolve beans by component value
+docs(spec): add English git conventions
+```
+
+PRs:
+
+- Title is an English Conventional Commit subject (what merged, not "updates" or "ajustes").
+- Body uses `.github/pull_request_template.md`: what changed, which Gherkin scenarios, how to verify.
+- Do not paste the Slack thread. Do not write the description in Portuguese.
+
+Reject your own commit or PR if any user-facing git text is not English. Rewrite it before push.
 
 ## Scope
 
