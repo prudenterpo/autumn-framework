@@ -11,8 +11,9 @@ public class LifecycleManager {
 
     private final List<Object> preDestroyCandidates = new CopyOnWriteArrayList<>();
 
-    public void postConstruct(Object bean) {
+    public void postConstruct(Object bean, boolean singleton) {
         Class<?> clazz = bean.getClass();
+        boolean hasPreDestroy = false;
 
         for (Method m : clazz.getDeclaredMethods()) {
             if (m.isAnnotationPresent(PostConstruct.class)) {
@@ -20,16 +21,16 @@ public class LifecycleManager {
                     m.setAccessible(true);
                     m.invoke(bean);
                 } catch (Exception e) {
-                    throw new IllegalStateException("[AUTUMN] Failed to invoke @PostConstruct on " + clazz.getName(), e);
+                    System.err.println("[AUTUMN] Failed to invoke @PostConstruct on " + clazz.getName() + ": " + e.getMessage());
                 }
+            }
+            if (!hasPreDestroy && m.isAnnotationPresent(PreDestroy.class)) {
+                hasPreDestroy = true;
             }
         }
 
-        for (Method m : clazz.getDeclaredMethods()) {
-            if (m.isAnnotationPresent(PreDestroy.class)) {
-                preDestroyCandidates.add(bean);
-                break;
-            }
+        if (singleton && hasPreDestroy) {
+            preDestroyCandidates.add(bean);
         }
     }
 

@@ -22,7 +22,7 @@ class LifecycleManagerTest {
 
         assertFalse(bean.isInitialized());
 
-        lifecycle.postConstruct(bean);
+        lifecycle.postConstruct(bean, true);
 
         assertTrue(bean.isInitialized());
     }
@@ -30,13 +30,46 @@ class LifecycleManagerTest {
     @Test
     void shouldInvokePreDestroyOnShutdown() {
         PreDestroyBean bean = new PreDestroyBean();
-        lifecycle.postConstruct(bean);
+        lifecycle.postConstruct(bean, true);
 
         assertFalse(bean.isDestroyed());
 
         lifecycle.shutdown();
 
         assertTrue(bean.isDestroyed());
+    }
+
+    @Test
+    void shouldNotTrackPrototypePreDestroy() {
+        PrototypeWithPreDestroyBean bean = new PrototypeWithPreDestroyBean();
+        lifecycle.postConstruct(bean, false);
+
+        lifecycle.shutdown();
+
+        assertFalse(bean.isDestroyed());
+    }
+
+    @Test
+    void shouldNotFailOnPostConstructException() {
+        FailingPostConstructBean bean = new FailingPostConstructBean();
+
+        assertDoesNotThrow(() -> lifecycle.postConstruct(bean, true));
+        assertTrue(bean.isInitialized());
+    }
+
+    @Test
+    void shouldHandleBothAnnotationsInSinglePass() {
+        AnnotatedBean bean = new AnnotatedBean();
+
+        lifecycle.postConstruct(bean, true);
+
+        assertTrue(bean.isPostConstructCalled());
+
+        assertFalse(bean.isPreDestroyCalled());
+
+        lifecycle.shutdown();
+
+        assertTrue(bean.isPreDestroyCalled());
     }
 
     static class PostConstructBean {
@@ -64,4 +97,19 @@ class LifecycleManagerTest {
             return destroyed;
         }
     }
+
+    static class FailingPostConstructBean {
+        private boolean initialized = false;
+
+        @PostConstruct
+        void fail() {
+            initialized = true;
+            throw new RuntimeException("BANG");
+        }
+
+        boolean isInitialized() {
+            return initialized;
+        }
+    }
+
 }

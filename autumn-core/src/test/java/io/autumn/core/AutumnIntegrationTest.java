@@ -2,6 +2,7 @@ package io.autumn.core;
 
 import io.autumn.core.context.AutumnContext;
 import io.autumn.core.testfixtures.EmailNotifier;
+import io.autumn.core.testfixtures.FailingPostConstructBean;
 import io.autumn.core.testfixtures.Notifier;
 import io.autumn.core.testfixtures.PrototypeBean;
 import io.autumn.core.testfixtures.ServiceA;
@@ -30,6 +31,16 @@ class AutumnIntegrationTest {
 
         assertNotNull(notifier);
         assertInstanceOf(EmailNotifier.class, notifier);
+    }
+
+    @Test
+    void shouldStartWithFailingPostConstruct() {
+        AutumnContext context = Autumn.start("io.autumn.core.testfixtures");
+
+        FailingPostConstructBean bean = context.getBean(FailingPostConstructBean.class);
+
+        assertNotNull(bean);
+        assertTrue(bean.isInitialized());
     }
 
     @Test
